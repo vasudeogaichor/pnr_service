@@ -2,7 +2,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from bs4 import BeautifulSoup as bs
-import requests
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 class PNRStatusApiView(APIView):
     def get(self, request, pnr_number, *args, **kwargs):
@@ -16,20 +19,32 @@ class PNRStatusApiView(APIView):
             return Response({"res": "Unavailable, please check the PNR number"}, status=status.HTTP_400_BAD_REQUEST)
 
 def get_pnr_status_page(pnr_number):
-    url = f"https://www.confirmtkt.com/pnr-status?pnr={pnr_number}"
-    response = requests.get(url)
-    return response.content
+    url = f"https://www.confirmtkt.com/pnr-status/{pnr_number}"
+    
+    driver = webdriver.Chrome()
+    driver.get(url)
+
+    wait = WebDriverWait(driver, 10)
+
+    wait.until(EC.presence_of_element_located((By.ID, 'passenger-info-container')))
+
+    page_source = driver.page_source
+
+    driver.quit()
+
+    return page_source
 
 def scrape_pnr_status_info(page_content):
-    soup = bs(page_content, features="lxml")
+    soup = bs(page_content, 'html5lib')
     div_html = soup.find('div', {'id': 'passenger-info-container'})
     tbody_html = div_html.find('tbody')
     tr_html = tbody_html.find_all('tr')
+    
     passengers_details = []
     for row in tr_html:
         all_td = row.find_all('td')
         passenger = {
-            "sr_no": int(all_td[0].text),
+            "sr_no": int(all_td[0].find('span').text),
             "current_status": all_td[1].find('span').text,
             "booking_status": all_td[2].find('span').text,
         }
