@@ -4,6 +4,7 @@ from rest_framework import status
 from bs4 import BeautifulSoup as bs
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -20,8 +21,12 @@ class PNRStatusApiView(APIView):
 
 def get_pnr_status_page(pnr_number):
     url = f"https://www.confirmtkt.com/pnr-status/{pnr_number}"
+
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
     
-    driver = webdriver.Chrome()
+    driver = webdriver.Chrome(options=chrome_options)
     driver.get(url)
 
     wait = WebDriverWait(driver, 10)
